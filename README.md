@@ -21,7 +21,7 @@ This repository contains a custom Apache Airflow provider for integrating with M
    Clone the repository and install the package using pip:
    ```bash
    git clone https://github.com/your-username/airflow-magento-provider.git
-   cd airflow-magento-provider
+   cd src/airflow-magento-provider
    pip install .
    ```
 
