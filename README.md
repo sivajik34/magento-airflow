@@ -1,6 +1,4 @@
-# magento-airflow
-Here's a sample description for your GitHub repository:
-
+# Magento- Apache Airflow
 ---
 
 ### **Airflow Magento Provider**
@@ -23,7 +21,7 @@ This repository contains a custom Apache Airflow provider for integrating with M
    Clone the repository and install the package using pip:
    ```bash
    git clone https://github.com/your-username/airflow-magento-provider.git
-   cd airflow-magento-provider
+   cd src/airflow-magento-provider
    pip install .
    ```
 
@@ -42,8 +40,6 @@ This repository contains a custom Apache Airflow provider for integrating with M
 Contributions are welcome! Please feel free to submit a pull request or open an issue.
 
 #### **License:**
-This project is licensed under the MIT License.
+This project is licensed under the Opensource License.
 
 ---
-
-You can customize the description to suit your specific needs or include additional sections if needed.
