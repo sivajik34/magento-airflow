@@ -1,5 +1,0 @@
-Metadata-Version: 2.1
-Name: airflow-magento-provider
-Version: 0.1
-Requires-Dist: apache-airflow
-Requires-Dist: requests

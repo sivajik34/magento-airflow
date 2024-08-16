@@ -1,2 +1,0 @@
-[airflow.providers]
-magento = airflow_magento_provider.magento_provider

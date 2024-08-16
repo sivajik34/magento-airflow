@@ -1,1 +1,0 @@
-airflow_magento_provider

@@ -16,7 +16,7 @@ class ProductSyncOperator(BaseOperator):
         hook = MagentoHook()
 
         # Get the product data from Magento
-        product_data = hook.get_request('products/24-MB01')
+        product_data = hook.get_request('products/24-WB02')
 
         # Ensure the product data is in the format expected (usually a list of dicts)
         if isinstance(product_data, dict):
