@@ -1,14 +1,16 @@
-import time
-import requests
-import uuid
-import hashlib
+import urllib.parse
 import hmac
+import hashlib
 import base64
-from requests_oauthlib import OAuth1Session
+import time
+import uuid
+from urllib.parse import urlencode
+import requests
 from airflow.hooks.base_hook import BaseHook
 from airflow.exceptions import AirflowException
 
 class MagentoHook(BaseHook):
+
     def __init__(self, magento_conn_id='magento', *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.magento_conn_id = magento_conn_id
@@ -33,10 +35,12 @@ class MagentoHook(BaseHook):
         oauth_signature_method = 'HMAC-SHA256'
         oauth_version = '1.0'
 
-        # Generate the signature
-        base_string = f"{method.upper()}&{requests.utils.quote(url, safe='')}"
+        # Parse the URL to separate the query parameters
+        parsed_url = urllib.parse.urlparse(url)
+        query_params = urllib.parse.parse_qsl(parsed_url.query)
 
-        parameters = {
+        # Prepare OAuth parameters
+        oauth_params = {
             'oauth_consumer_key': self.consumer_key,
             'oauth_nonce': oauth_nonce,
             'oauth_signature_method': oauth_signature_method,
@@ -45,23 +49,37 @@ class MagentoHook(BaseHook):
             'oauth_version': oauth_version
         }
 
-        parameter_string = '&'.join([f"{requests.utils.quote(k, safe='')}={requests.utils.quote(v, safe='')}" 
-                                     for k, v in sorted(parameters.items())])
-        base_string += f"&{requests.utils.quote(parameter_string, safe='')}"
+        # Include data parameters if present
+        if data:
+            query_params.extend(data.items())
 
-        signing_key = f"{requests.utils.quote(self.consumer_secret, safe='')}&{requests.utils.quote(self.access_token_secret, safe='')}"
+        # Combine OAuth and query/data parameters, and sort them
+        all_params = oauth_params.copy()
+        all_params.update(query_params)
+        sorted_params = sorted(all_params.items(), key=lambda x: x[0])
+
+        # Encode and create the parameter string
+        param_str = urllib.parse.urlencode(sorted_params, safe='')
+
+        # Construct the base string
+        base_string = f"{method.upper()}&{urllib.parse.quote(parsed_url.scheme + '://' + parsed_url.netloc + parsed_url.path, safe='')}&{urllib.parse.quote(param_str, safe='')}"
+
+        # Create the signing key
+        signing_key = f"{urllib.parse.quote(self.consumer_secret, safe='')}&{urllib.parse.quote(self.access_token_secret, safe='')}"
+
+        # Generate the OAuth signature
         oauth_signature = base64.b64encode(hmac.new(signing_key.encode(), base_string.encode(), hashlib.sha256).digest()).decode()
 
+        # Add the signature to OAuth parameters
+        oauth_params['oauth_signature'] = oauth_signature
 
-        parameters['oauth_signature'] = oauth_signature
-        auth_header = 'OAuth ' + ', '.join([f'{k}="{v}"' for k, v in parameters.items()])
-
+        # Construct the Authorization header
+        auth_header = 'OAuth ' + ', '.join([f'{urllib.parse.quote(k)}="{urllib.parse.quote(v)}"' for k, v in oauth_params.items()])        
         return auth_header
 
     def get_request(self, endpoint, method='GET', data=None):
         """Perform an API request to Magento"""
         url = f"https://{self.connection.host}/rest/default/V1/{endpoint}"
-
         headers = {
             'Content-Type': 'application/json',
             'Authorization': self._generate_oauth_parameters(url, method, data)
@@ -72,10 +90,42 @@ class MagentoHook(BaseHook):
                 response = requests.get(url, headers=headers, verify=False)  # Use GET method
             else:
                 response = requests.request(method, url, headers=headers, json=data, verify=False)  # Use method provided
-            
+
             response.raise_for_status()  # Will raise an error for bad responses
+
+        except requests.exceptions.HTTPError as http_err:
+            error_details = None
+            try:
+                # Attempt to parse and log the error response
+                error_details = response.json() if response.content else {}
+                self.log.error(f"Error details: {error_details}")
+            except ValueError:
+                # Failed to parse JSON response
+                pass
+
+            raise AirflowException(
+                f"Request failed: {http_err}. Error details: {error_details}"
+            )
+
         except requests.exceptions.RequestException as e:
             raise AirflowException(f"Request failed: {str(e)}")
 
         return response.json()
+
+    def get_orders(self, search_criteria=None):
+        """
+        Fetch orders from Magento.
+
+        :param search_criteria: Dictionary containing search criteria to filter orders
+        :return: List of orders
+        """
+        endpoint = "orders"
+
+        if search_criteria:
+            # Convert search criteria dictionary to URL parameters
+            query_string = urlencode(search_criteria, doseq=True)
+            endpoint = f"{endpoint}?{query_string}"
+
+        self.log.info(f"Requesting orders from Magento: {endpoint}")
+        return self.get_request(endpoint)
 
