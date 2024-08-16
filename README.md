@@ -40,8 +40,6 @@ This repository contains a custom Apache Airflow provider for integrating with M
 Contributions are welcome! Please feel free to submit a pull request or open an issue.
 
 #### **License:**
-This project is licensed under the MIT License.
+This project is licensed under the Opensource License.
 
 ---
-
-You can customize the description to suit your specific needs or include additional sections if needed.
