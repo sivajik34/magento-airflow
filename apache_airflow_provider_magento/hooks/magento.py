@@ -43,8 +43,12 @@ class MagentoHook(BaseHook):
         )
 
     def _get_full_url(self, endpoint):
-        """Construct the full URL for Magento API."""
-        return f"https://{self.connection.host}{self.BASE_URL}/{endpoint}"
+        """Construct the full URL for Magento API."""        
+        base_url = self.connection.host
+        base_url = base_url if base_url.startswith('http') else f"https://{base_url}"
+        base_url = base_url.rstrip('/')  # Ensure no trailing slash
+        endpoint_url = endpoint.lstrip('/')  # Ensure no leading slash
+        return f"{base_url}{self.BASE_URL}/{endpoint_url}"        
 
     def _handle_response(self, response):
         """Handle HTTP response, logging errors and raising exceptions if needed."""
