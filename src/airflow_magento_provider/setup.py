@@ -8,8 +8,7 @@ setup(
         'apache-airflow',
         'magento'
     ],
-    extras_require={
-        'sensors': ['apache-airflow[sensors]'],
+    extras_require={        
         'hooks': ['apache-airflow[hooks]'],
         'operators': ['apache-airflow[operators]'],
     },
