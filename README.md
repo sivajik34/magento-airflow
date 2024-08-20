@@ -8,7 +8,7 @@ This repository contains a custom Apache Airflow provider for integrating with M
 #### **Features:**
 - **Magento Integration**: Seamlessly connect to Magento 2 using OAuth1 authentication for secure API requests.  
 - **Custom Airflow Hooks**: Simplifies interaction with Magento's REST API.
-- **Custom Airflow Operators**: Provides an operator to fetch and manipulate order data and other data from Magento.
+- **Custom Airflow Operators**: Provides an operator to fetch and manipulate orders and other data from Magento.
 
 #### **Contents:**
 - **`airflow_magento_provider/hooks/magento.py`**: Contains the `MagentoHook` class, which handles OAuth authentication and API requests to Magento.
@@ -19,16 +19,16 @@ This repository contains a custom Apache Airflow provider for integrating with M
 1. **Install the provider**:
    Clone the repository and install the package using pip:
    ```bash
-   git clone https://github.com/your-username/airflow-magento-provider.git
-   cd src/airflow-magento-provider
+   git clone [https://github.com/your-username/airflow-magento-provider.git](https://github.com/sivajik34/magento-airflow.git)
+   cd apache_airflow_provider_magento
    pip install .
    ```
 
 2. **Set up Airflow connections**:
-   - Create an Airflow connection with your Magento credentials.
+   - Create an Airflow connection with your Magento credentials( System -> Integration -> Add new Integration).
 
 3. **Create a DAG**:
-   - Set up your order synchronization pipeline for the example DAG in `dags/magento_order_sync.py`.
+   - Set up your order synchronization pipeline for the example DAG in `example_dags/magento_order_sync.py`.
 
 #### **Requirements:**
 - Apache Airflow 2.x
