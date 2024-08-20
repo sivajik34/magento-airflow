@@ -20,7 +20,7 @@ from datetime import datetime
 
 from airflow.models import DAG
 from airflow.operators.python import PythonOperator
-from airflow_magento_provider.operators.sales import GetOrdersOperator
+from apache_airflow_provider_magento.operators.sales import GetOrdersOperator
 
 
 def process_orders(**kwargs):

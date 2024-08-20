@@ -4,7 +4,7 @@ from datetime import datetime
 
 from airflow.models import DAG
 from airflow.operators.python import PythonOperator
-from airflow_magento_provider.operators.customer import CreateCustomerOperator
+from apache_airflow_provider_magento.operators.customer import CreateCustomerOperator
 
 def process_customer_creation(**kwargs):
     ti = kwargs["ti"]

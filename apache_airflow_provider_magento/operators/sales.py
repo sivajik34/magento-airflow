@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from airflow.models import BaseOperator
-from airflow_magento_provider.hooks.magento import MagentoHook
+from apache_airflow_provider_magento.hooks.magento import MagentoHook
 
 
 class GetOrdersOperator(BaseOperator):
