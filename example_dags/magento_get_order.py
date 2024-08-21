@@ -19,7 +19,7 @@ def process_orders(**kwargs):
 
 
 dag = DAG(
-    dag_id="magento_orders_dag",
+    dag_id="magento_get_orders",
     start_date=datetime(2024, 8, 18),
     schedule_interval="@daily",
 )
