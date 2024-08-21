@@ -12,14 +12,14 @@ This repository contains a custom Apache Airflow provider for integrating with M
 
 #### **Contents:**
 - **`airflow_magento_provider/hooks/magento.py`**: Contains the `MagentoHook` class, which handles OAuth authentication and API requests to Magento.
-- **`airflow_magento_provider/operators/sales.py`**: Contains the `GetOrdersOperator` class, which fetches orders from Magento and allows for further processing.
+- **`airflow_magento_provider/operators/magento.py`**: Contains the `MagentoApiOperator` class.
 - **`example_dags/magento_order_sync.py`**: Example DAG for synchronizing products from Magento and exporting them to a CSV file.
 
 #### **Getting Started:**
 1. **Install the provider**:
    Clone the repository and install the package using pip:
    ```bash
-   git clone [https://github.com/your-username/airflow-magento-provider.git](https://github.com/sivajik34/magento-airflow.git)
+   git clone https://github.com/sivajik34/magento-airflow.git
    cd apache_airflow_provider_magento
    pip install .
    ```
@@ -32,13 +32,13 @@ This repository contains a custom Apache Airflow provider for integrating with M
 
 #### **Requirements:**
 - Apache Airflow 2.x
-- Magento 2.x
+- Magento 2.4.x
 - Python 3.8+
 
 #### **Contributing:**
 Contributions are welcome! Please feel free to submit a pull request or open an issue.
 
 #### **License:**
-This project is licensed under the Opensource License.
+This project is licensed under the MIT License.
 
 ---
