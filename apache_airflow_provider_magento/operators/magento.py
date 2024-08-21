@@ -1,8 +1,8 @@
 from __future__ import annotations
-
 from airflow.models.baseoperator import BaseOperator
 from apache_airflow_provider_magento.hooks.magento import MagentoHook
 import logging
+from airflow.exceptions import AirflowException
 
 class MagentoApiOperator(BaseOperator):
     def __init__(self, endpoint: str, method: str = 'GET', data: dict = None, search_criteria: dict = None, magento_conn_id: str = "magento_default", *args, **kwargs):
@@ -12,6 +12,10 @@ class MagentoApiOperator(BaseOperator):
         self.data = data or {}
         self.search_criteria = search_criteria or {}
         self.magento_conn_id = magento_conn_id
+
+        # Validate HTTP method
+        if self.method not in ['GET', 'POST', 'PUT', 'DELETE']:
+            raise ValueError(f"Unsupported HTTP method: {self.method}")
 
     def execute(self, context):
         magento_hook = MagentoHook(self.magento_conn_id)  # Instantiate the MagentoHook
@@ -26,14 +30,19 @@ class MagentoApiOperator(BaseOperator):
                 result = magento_hook.put_request(self.endpoint, data=self.data)
             elif self.method == 'DELETE':
                 result = magento_hook.delete_request(self.endpoint, data=self.data)
-            else:
-                raise ValueError(f"Unsupported HTTP method: {self.method}")
 
-            self.log.info("Response: %s", result)
+            self.log.info("Response received from Magento API: %s", result)
             return result
 
-        except Exception as e:
-            self.log.error("An error occurred while making the request: %s", e)
+        except AirflowException as ae:
+            self.log.error("AirflowException occurred: %s", ae)
             raise
 
+        except ValueError as ve:
+            self.log.error("ValueError occurred: %s", ve)
+            raise
+
+        except Exception as e:
+            self.log.error("An unexpected error occurred: %s", e, exc_info=True)
+            raise
 
