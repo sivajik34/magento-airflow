@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from requests_oauthlib import OAuth1
 import requests
 from urllib.parse import urlencode
@@ -6,13 +8,15 @@ from airflow.hooks.base import BaseHook
 import json
 
 class MagentoHook(BaseHook):
-    """Creates a connection to Magento and allows data interactions via Magento's REST API."""
+    """Creates a connection to Magento and allows data interactions via Magento's REST API and GraphQL API."""
 
     conn_name_attr = "magento_conn_id"
     default_conn_name = "magento_default"
     conn_type = "magento"
     hook_name = "Magento"
-    BASE_URL = "/rest/default/V1"  # Common base URL for Magento API
+
+    BASE_URL = "/rest/default/V1"  # REST API base URL
+    GRAPHQL_ENDPOINT = "/graphql"  # GraphQL API endpoint
 
     def __init__(self, magento_conn_id=default_conn_name):
         super().__init__()
@@ -43,12 +47,18 @@ class MagentoHook(BaseHook):
         )
 
     def _get_full_url(self, endpoint):
-        """Construct the full URL for Magento API."""        
+        """Construct the full URL for Magento API."""
         base_url = self.connection.host
         base_url = base_url if base_url.startswith('http') else f"https://{base_url}"
         base_url = base_url.rstrip('/')  # Ensure no trailing slash
         endpoint_url = endpoint.lstrip('/')  # Ensure no leading slash
         return f"{base_url}{self.BASE_URL}/{endpoint_url}"
+
+    def _get_graphql_url(self):
+        """Construct the full URL for Magento GraphQL API."""
+        base_url = self.connection.host
+        base_url = base_url if base_url.startswith('http') else f"https://{base_url}"
+        return f"{base_url}{self.GRAPHQL_ENDPOINT}"
 
     def _handle_response(self, response):
         """Handle HTTP response, logging errors and raising exceptions if needed."""
@@ -82,32 +92,51 @@ class MagentoHook(BaseHook):
         self.log.error("Response body: %s", response.text)
         self.log.error("Error details: %s", error_details)
 
-    def _send_request(self, endpoint, method="GET", data=None, search_criteria=None):
+    def _send_request(self, endpoint, method="GET", data=None, search_criteria=None, headers=None):
         """Perform an API request to Magento."""
         url = self._get_full_url(endpoint)
+
         if search_criteria:
             query_string = urlencode(search_criteria, doseq=True)
             url = f"{url}?{query_string}"
-        try:
-            response = requests.request(method, url, auth=self.oauth, json=data, verify=False)
-            return self._handle_response(response)
-        except requests.exceptions.RequestException as e:
-            self.log.error("Request failed: %s", e)
-            raise AirflowException(f"Request failed: {e}")
 
-    def get_request(self, endpoint, search_criteria=None):
+        # Determine if headers contain an authorization token
+        if headers and 'Authorization' in headers:
+            response = requests.request(method, url, json=data, headers=headers, verify=False)
+        else:
+            response = requests.request(method, url, auth=self.oauth, json=data, headers=headers, verify=False)
+
+        return self._handle_response(response)
+
+    def get_request(self, endpoint, search_criteria=None, headers=None):
         """Perform a GET API request to Magento."""
-        return self._send_request(endpoint, method="GET", search_criteria=search_criteria)
+        return self._send_request(endpoint, method="GET", search_criteria=search_criteria, headers=headers)
 
-    def post_request(self, endpoint, data=None):
+    def post_request(self, endpoint, data=None, headers=None):
         """Perform a POST API request to Magento."""
-        return self._send_request(endpoint, method="POST", data=data)
+        return self._send_request(endpoint, method="POST", data=data, headers=headers)
 
-    def put_request(self, endpoint, data=None):
+    def put_request(self, endpoint, data=None, headers=None):
         """Perform a PUT API request to Magento."""
-        return self._send_request(endpoint, method="PUT", data=data)
+        return self._send_request(endpoint, method="PUT", data=data, headers=headers)
 
-    def delete_request(self, endpoint, data=None):
+    def delete_request(self, endpoint, data=None, headers=None):
         """Perform a DELETE API request to Magento."""
-        return self._send_request(endpoint, method="DELETE", data=data)
+        return self._send_request(endpoint, method="DELETE", data=data, headers=headers)
+
+    def graphql_request(self, query, variables=None, headers=None):
+        """Perform a GraphQL API request to Magento."""
+        url = self._get_graphql_url()
+        payload = {
+            'query': query,
+            'variables': variables or {}
+        }
+
+        # Determine if headers contain an authorization token
+        if headers and 'Authorization' in headers:
+            response = requests.post(url, json=payload, headers=headers, verify=False)
+        else:
+            response = requests.post(url, json=payload, auth=self.oauth, headers=headers, verify=False)
+
+        return self._handle_response(response)
 

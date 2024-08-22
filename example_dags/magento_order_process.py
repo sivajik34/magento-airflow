@@ -2,7 +2,7 @@ from __future__ import annotations
 from airflow import DAG
 from airflow.decorators import task
 from datetime import datetime
-from apache_airflow_provider_magento.operators.magento import MagentoApiOperator
+from apache_airflow_provider_magento.operators.rest import MagentoRestOperator
 
 default_args = {
     'owner': 'airflow',
@@ -35,7 +35,7 @@ def create_product(sku: str, price: float, **kwargs) -> str:
             }
         }
     }
-    op = MagentoApiOperator(
+    op = MagentoRestOperator(
         task_id=f'create_product_{sku}_op',
         endpoint='products',
         method='POST',
@@ -47,7 +47,7 @@ def create_product(sku: str, price: float, **kwargs) -> str:
 
 @task
 def check_product_exists(sku: str, **kwargs) -> bool:
-    op = MagentoApiOperator(
+    op = MagentoRestOperator(
         task_id=f'check_product_exists_{sku}_op',
         endpoint=f'products/{sku}',
         method='GET',
@@ -64,7 +64,7 @@ def check_product_exists(sku: str, **kwargs) -> bool:
 
 @task
 def create_guest_cart(**kwargs) -> str:
-    op = MagentoApiOperator(
+    op = MagentoRestOperator(
         task_id='create_guest_cart_op',
         endpoint='guest-carts',
         method='POST',
@@ -86,7 +86,7 @@ def add_item_to_cart(product_id: str, quote_id: str, **kwargs) -> dict:
             "quote_id": quote_id
         }
     }
-    op = MagentoApiOperator(
+    op = MagentoRestOperator(
         task_id=f'add_item_{product_id}_to_cart_op',
         endpoint=f'guest-carts/{quote_id}/items',
         method='POST',
@@ -100,7 +100,7 @@ def add_item_to_cart(product_id: str, quote_id: str, **kwargs) -> dict:
 
 @task
 def set_billing_address(quote_id: str, **kwargs) -> str:
-    op = MagentoApiOperator(
+    op = MagentoRestOperator(
         task_id='set_billing_address_op',
         endpoint=f'guest-carts/{quote_id}/billing-address',
         method='POST',
@@ -130,7 +130,7 @@ def set_billing_address(quote_id: str, **kwargs) -> str:
 
 @task
 def set_shipping_address(quote_id: str, **kwargs) -> str:
-    op = MagentoApiOperator(
+    op = MagentoRestOperator(
         task_id='set_shipping_address_op',
         endpoint=f'guest-carts/{quote_id}/shipping-information',
         method='POST',
@@ -164,7 +164,7 @@ def set_shipping_address(quote_id: str, **kwargs) -> str:
 
 @task
 def set_payment_method_and_place_order(quote_id: str, **kwargs) -> str:
-    op = MagentoApiOperator(
+    op = MagentoRestOperator(
         task_id='place_order_op',
         endpoint=f'guest-carts/{quote_id}/payment-information',
         method='POST',
@@ -178,7 +178,7 @@ def set_payment_method_and_place_order(quote_id: str, **kwargs) -> str:
 
 @task
 def get_order_info(order_id: str, **kwargs) -> dict:
-    op = MagentoApiOperator(
+    op = MagentoRestOperator(
         task_id='get_order_info_op',
         endpoint=f'orders/{order_id}',
         method='GET',
@@ -190,7 +190,7 @@ def get_order_info(order_id: str, **kwargs) -> dict:
 @task
 def create_invoice(order_id: str, order_items: list, **kwargs) -> str:
     items = [{"order_item_id": item["item_id"], "qty": item["qty_ordered"]} for item in order_items]
-    op = MagentoApiOperator(
+    op = MagentoRestOperator(
         task_id='create_invoice_op',
         endpoint=f'order/{order_id}/invoice',
         method='POST',
@@ -213,7 +213,7 @@ def create_invoice(order_id: str, order_items: list, **kwargs) -> str:
 @task
 def create_shipment(order_id: str, order_items: list, **kwargs) -> str:
     items = [{"order_item_id": item["item_id"], "qty": item["qty_ordered"]} for item in order_items]
-    op = MagentoApiOperator(
+    op = MagentoRestOperator(
         task_id='create_shipment_op',
         endpoint=f'order/{order_id}/ship',
         method='POST',

@@ -1,16 +1,25 @@
 from __future__ import annotations
+
 from airflow.models.baseoperator import BaseOperator
 from apache_airflow_provider_magento.hooks.magento import MagentoHook
-import logging
 from airflow.exceptions import AirflowException
+import logging
 
-class MagentoApiOperator(BaseOperator):
-    def __init__(self, endpoint: str, method: str = 'GET', data: dict = None, search_criteria: dict = None, magento_conn_id: str = "magento_default", *args, **kwargs):
+class MagentoRestOperator(BaseOperator):
+    def __init__(self, 
+                 endpoint: str, 
+                 method: str = 'GET', 
+                 data: dict = None, 
+                 search_criteria: dict = None, 
+                 headers: dict = None,
+                 magento_conn_id: str = "magento_default", 
+                 *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.endpoint = endpoint
         self.method = method.upper()
         self.data = data or {}
         self.search_criteria = search_criteria or {}
+        self.headers = headers or {}  # Initialize headers
         self.magento_conn_id = magento_conn_id
 
         # Validate HTTP method
@@ -23,13 +32,13 @@ class MagentoApiOperator(BaseOperator):
 
         try:
             if self.method == 'GET':
-                result = magento_hook.get_request(self.endpoint, search_criteria=self.search_criteria)
+                result = magento_hook.get_request(self.endpoint, search_criteria=self.search_criteria, headers=self.headers)
             elif self.method == 'POST':
-                result = magento_hook.post_request(self.endpoint, data=self.data)
+                result = magento_hook.post_request(self.endpoint, data=self.data, headers=self.headers)
             elif self.method == 'PUT':
-                result = magento_hook.put_request(self.endpoint, data=self.data)
+                result = magento_hook.put_request(self.endpoint, data=self.data, headers=self.headers)
             elif self.method == 'DELETE':
-                result = magento_hook.delete_request(self.endpoint, data=self.data)
+                result = magento_hook.delete_request(self.endpoint, data=self.data, headers=self.headers)
 
             self.log.info("Response received from Magento API: %s", result)
             return result
