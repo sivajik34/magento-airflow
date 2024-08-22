@@ -29,7 +29,7 @@ def create_product(sku: str, price: float, **kwargs) -> str:
             "weight": 1,
             "extension_attributes": {
                 "stock_item": {
-                    "qty": 100,
+                    "qty": 450,
                     "is_in_stock": True
                 }
             }
@@ -241,7 +241,7 @@ def create_shipment(order_id: str, order_items: list, **kwargs) -> str:
     return shipment_id
 
 with DAG(
-    'magento_order_process',
+    'magento_guest_order_rest_demo',
     default_args=default_args,
     description='A DAG to perform various operations on Magento',
     schedule_interval=None,  # Run only once manually

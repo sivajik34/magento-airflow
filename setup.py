@@ -2,8 +2,8 @@ from setuptools import setup, find_packages
 
 setup(
     name='apache-airflow-provider-magento',
-    version='0.2.1',
-    description="Apache Airflow provider for Magento 2",
+    version='0.3',
+    description="custom provider for Magento 2 - Apache Airflow",
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     author="Sivakumar Koduru",
