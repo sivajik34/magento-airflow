@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from airflow.models.baseoperator import BaseOperator
+from apache_airflow_provider_magento.hooks.magento import MagentoHook
 from airflow.exceptions import AirflowException
 import logging
 
@@ -8,15 +9,17 @@ class MagentoRestAsyncOperator(BaseOperator):
 
     def __init__(self,
                  endpoint: str,
+                 method: str = 'POST', 
                  data: dict = None,
-                 headers: dict = None,
-                 magento_conn_id: str = "magento_default",
+                 headers: dict = None,                 
                  timeout: int = 300,
                  interval: int = 10,
-                 store_view_code: str = "default"
+                 store_view_code: str = "default",
+                 magento_conn_id: str = "magento_default",
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.endpoint = endpoint
+        self.method = method
         self.data = data or {}
         self.headers = headers or {}
         self.magento_conn_id = magento_conn_id
@@ -29,7 +32,7 @@ class MagentoRestAsyncOperator(BaseOperator):
 
         # Perform the asynchronous request
         try:
-            response = magento_hook.async_post_request(self.endpoint, data=self.data, headers=self.headers)
+            response = magento_hook.async_post_request(self.endpoint,self.method, data=self.data, headers=self.headers)
             bulk_uuid = response.get("bulk_uuid")
 
             if not bulk_uuid:

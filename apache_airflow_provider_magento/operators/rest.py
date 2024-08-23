@@ -13,7 +13,7 @@ class MagentoRestOperator(BaseOperator):
                  search_criteria: dict = None, 
                  headers: dict = None,
                  magento_conn_id: str = "magento_default",
-                 store_view_code: str = "default" 
+                 store_view_code: str = "default", 
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.endpoint = endpoint

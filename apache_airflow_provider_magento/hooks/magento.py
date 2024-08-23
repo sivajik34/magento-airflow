@@ -71,7 +71,7 @@ class MagentoHook(BaseHook):
         base_url = self.connection.host
         base_url = base_url if base_url.startswith('http') else f"https://{base_url}"
         base_url = base_url.rstrip('/')
-        base_url = base_url + self.ASYNC_ENDPOINT
+        base_url = base_url + self.ASYNC_ENDPOINT.format(store_view_code=self.store_view_code)
         endpoint_url = endpoint.lstrip('/')
         return f"{base_url}/{endpoint_url}"
 
@@ -148,10 +148,11 @@ class MagentoHook(BaseHook):
             response = requests.post(url, json=payload, auth=self.oauth, headers=headers, verify=False)
         return self._handle_response(response)
 
-    def async_post_request(self, endpoint, data=None, headers=None):
+    def async_post_request(self, endpoint, method, data=None, headers=None):
         """Perform an asynchronous POST API request to Magento."""
         url = self._get_async_url(endpoint)
-        return self._send_request(url, method="POST", data=data, headers=headers)
+        response = requests.request(method, url, json=data, headers=headers, verify=False)
+        return self._handle_response(response)
 
     def get_bulk_status(self, bulk_uuid):
         """Retrieve the status of an asynchronous request using bulk_uuid."""
