@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from requests_oauthlib import OAuth1
 import requests
 from urllib.parse import urlencode
@@ -15,12 +14,13 @@ class MagentoHook(BaseHook):
     conn_type = "magento"
     hook_name = "Magento"
 
-    BASE_URL = "/rest/default/V1"  # REST API base URL
+    REST_ENDPOINT = "/rest/{store_view_code}/V1"  
     GRAPHQL_ENDPOINT = "/graphql"  # GraphQL API endpoint
 
-    def __init__(self, magento_conn_id=default_conn_name):
+    def __init__(self, magento_conn_id=default_conn_name, store_view_code='default'):
         super().__init__()
         self.magento_conn_id = magento_conn_id
+        self.store_view_code = store_view_code
         self.connection = self.get_connection(self.magento_conn_id)
         self._validate_connection()
         self._configure_oauth()
@@ -29,7 +29,9 @@ class MagentoHook(BaseHook):
         """Validate Magento connection configuration."""
         if not self.connection.host:
             raise AirflowException("Magento connection host is not set properly in Airflow connection")
-        if not all([self.connection.extra_dejson.get(field) for field in ["consumer_key", "consumer_secret", "access_token", "access_token_secret"]]):
+
+        required_fields = ["consumer_key", "consumer_secret", "access_token", "access_token_secret"]
+        if not all(self.connection.extra_dejson.get(field) for field in required_fields):
             raise AirflowException("Magento OAuth credentials are not set properly in Airflow connection")
 
     def _configure_oauth(self):
@@ -51,8 +53,9 @@ class MagentoHook(BaseHook):
         base_url = self.connection.host
         base_url = base_url if base_url.startswith('http') else f"https://{base_url}"
         base_url = base_url.rstrip('/')  # Ensure no trailing slash
+        base_url = base_url + self.REST_ENDPOINT.format(store_view_code=self.store_view_code)
         endpoint_url = endpoint.lstrip('/')  # Ensure no leading slash
-        return f"{base_url}{self.BASE_URL}/{endpoint_url}"
+        return f"{base_url}/{endpoint_url}"
 
     def _get_graphql_url(self):
         """Construct the full URL for Magento GraphQL API."""
@@ -100,7 +103,6 @@ class MagentoHook(BaseHook):
             query_string = urlencode(search_criteria, doseq=True)
             url = f"{url}?{query_string}"
 
-        # Determine if headers contain an authorization token
         if headers and 'Authorization' in headers:
             response = requests.request(method, url, json=data, headers=headers, verify=False)
         else:
@@ -132,7 +134,6 @@ class MagentoHook(BaseHook):
             'variables': variables or {}
         }
 
-        # Determine if headers contain an authorization token
         if headers and 'Authorization' in headers:
             response = requests.post(url, json=payload, headers=headers, verify=False)
         else:
