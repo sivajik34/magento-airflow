@@ -12,7 +12,8 @@ class MagentoRestOperator(BaseOperator):
                  data: dict = None, 
                  search_criteria: dict = None, 
                  headers: dict = None,
-                 magento_conn_id: str = "magento_default", 
+                 magento_conn_id: str = "magento_default",
+                 store_view_code: str = "default" 
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.endpoint = endpoint
@@ -21,13 +22,14 @@ class MagentoRestOperator(BaseOperator):
         self.search_criteria = search_criteria or {}
         self.headers = headers or {}  # Initialize headers
         self.magento_conn_id = magento_conn_id
+        self.store_view_code = store_view_code
 
         # Validate HTTP method
         if self.method not in ['GET', 'POST', 'PUT', 'DELETE']:
             raise ValueError(f"Unsupported HTTP method: {self.method}")
 
     def execute(self, context):
-        magento_hook = MagentoHook(self.magento_conn_id)  # Instantiate the MagentoHook
+        magento_hook = MagentoHook(self.magento_conn_id, store_view_code=self.store_view_code)  # Instantiate the MagentoHook
         result = None
 
         try:

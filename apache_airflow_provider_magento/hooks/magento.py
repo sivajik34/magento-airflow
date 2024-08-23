@@ -1,21 +1,24 @@
 from __future__ import annotations
+
 from requests_oauthlib import OAuth1
 import requests
 from urllib.parse import urlencode
 from airflow.exceptions import AirflowException
 from airflow.hooks.base import BaseHook
 import json
+import time
 
 class MagentoHook(BaseHook):
     """Creates a connection to Magento and allows data interactions via Magento's REST API and GraphQL API."""
-
+    
     conn_name_attr = "magento_conn_id"
     default_conn_name = "magento_default"
     conn_type = "magento"
     hook_name = "Magento"
 
-    REST_ENDPOINT = "/rest/{store_view_code}/V1"  
+    REST_ENDPOINT = "/rest/{store_view_code}/V1"
     GRAPHQL_ENDPOINT = "/graphql"  # GraphQL API endpoint
+    ASYNC_ENDPOINT = "/rest/{store_view_code}/async/V1"
 
     def __init__(self, magento_conn_id=default_conn_name, store_view_code='default'):
         super().__init__()
@@ -63,6 +66,15 @@ class MagentoHook(BaseHook):
         base_url = base_url if base_url.startswith('http') else f"https://{base_url}"
         return f"{base_url}{self.GRAPHQL_ENDPOINT}"
 
+    def _get_async_url(self, endpoint):
+        """Construct the full URL for Magento asynchronous API."""
+        base_url = self.connection.host
+        base_url = base_url if base_url.startswith('http') else f"https://{base_url}"
+        base_url = base_url.rstrip('/')
+        base_url = base_url + self.ASYNC_ENDPOINT
+        endpoint_url = endpoint.lstrip('/')
+        return f"{base_url}/{endpoint_url}"
+
     def _handle_response(self, response):
         """Handle HTTP response, logging errors and raising exceptions if needed."""
         try:
@@ -98,16 +110,13 @@ class MagentoHook(BaseHook):
     def _send_request(self, endpoint, method="GET", data=None, search_criteria=None, headers=None):
         """Perform an API request to Magento."""
         url = self._get_full_url(endpoint)
-
         if search_criteria:
             query_string = urlencode(search_criteria, doseq=True)
             url = f"{url}?{query_string}"
-
         if headers and 'Authorization' in headers:
             response = requests.request(method, url, json=data, headers=headers, verify=False)
         else:
             response = requests.request(method, url, auth=self.oauth, json=data, headers=headers, verify=False)
-
         return self._handle_response(response)
 
     def get_request(self, endpoint, search_criteria=None, headers=None):
@@ -133,11 +142,30 @@ class MagentoHook(BaseHook):
             'query': query,
             'variables': variables or {}
         }
-
         if headers and 'Authorization' in headers:
             response = requests.post(url, json=payload, headers=headers, verify=False)
         else:
             response = requests.post(url, json=payload, auth=self.oauth, headers=headers, verify=False)
-
         return self._handle_response(response)
+
+    def async_post_request(self, endpoint, data=None, headers=None):
+        """Perform an asynchronous POST API request to Magento."""
+        url = self._get_async_url(endpoint)
+        return self._send_request(url, method="POST", data=data, headers=headers)
+
+    def get_bulk_status(self, bulk_uuid):
+        """Retrieve the status of an asynchronous request using bulk_uuid."""
+        url = f"{self._get_async_url('/async-status')}/{bulk_uuid}"
+        return self._send_request(url, method="GET")
+
+    def wait_for_bulk_completion(self, bulk_uuid, timeout=300, interval=10):
+        """Wait for the asynchronous request to complete."""
+        start_time = time.time()
+        while True:
+            status_response = self.get_bulk_status(bulk_uuid)
+            if status_response.get("status") == "completed":
+                return status_response
+            if time.time() - start_time > timeout:
+                raise AirflowException(f"Bulk operation with UUID {bulk_uuid} timed out.")
+            time.sleep(interval)
 
