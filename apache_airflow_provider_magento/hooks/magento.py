@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from requests_oauthlib import OAuth1
 import requests
 from urllib.parse import urlencode
@@ -10,7 +9,7 @@ import time
 
 class MagentoHook(BaseHook):
     """Creates a connection to Magento and allows data interactions via Magento's REST API and GraphQL API."""
-    
+
     conn_name_attr = "magento_conn_id"
     default_conn_name = "magento_default"
     conn_type = "magento"
@@ -151,22 +150,46 @@ class MagentoHook(BaseHook):
     def async_post_request(self, endpoint, method, data=None, headers=None):
         """Perform an asynchronous POST API request to Magento."""
         url = self._get_async_url(endpoint)
-        response = requests.request(method, url, json=data, headers=headers, verify=False)
+        response = requests.request(method, url, auth=self.oauth, json=data, headers=headers, verify=False)
         return self._handle_response(response)
 
     def get_bulk_status(self, bulk_uuid):
         """Retrieve the status of an asynchronous request using bulk_uuid."""
-        url = f"{self._get_async_url('/async-status')}/{bulk_uuid}"
-        return self._send_request(url, method="GET")
+        endpoint = f"/bulk/{bulk_uuid}/status"
+        response = self._send_request(endpoint, method="GET")
+        
+        # Parsing the response to return more structured data
+        operations = []
+        for operation in response.get("operations_list", []):
+            operations.append({
+                "id": operation.get("id"),
+                "status": operation.get("status"),
+                "result_message": operation.get("result_message"),
+                "error_code": operation.get("error_code")
+            })
+        
+        return {
+            "bulk_id": response.get("bulk_id"),
+            "user_type": response.get("user_type"),
+            "description": response.get("description"),
+            "start_time": response.get("start_time"),
+            "user_id": response.get("user_id"),
+            "operation_count": response.get("operation_count"),
+            "operations": operations
+        }
 
     def wait_for_bulk_completion(self, bulk_uuid, timeout=300, interval=10):
         """Wait for the asynchronous request to complete."""
         start_time = time.time()
         while True:
             status_response = self.get_bulk_status(bulk_uuid)
-            if status_response.get("status") == "completed":
+            all_completed = all(op["status"] == 1 for op in status_response["operations"])
+
+            if all_completed:
                 return status_response
+
             if time.time() - start_time > timeout:
                 raise AirflowException(f"Bulk operation with UUID {bulk_uuid} timed out.")
+
             time.sleep(interval)
 
