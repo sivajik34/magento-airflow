@@ -1,26 +1,34 @@
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "apache-airflow-provider-magento"
-version = "0.4"
-description = "custom provider for Magento 2 - Apache Airflow"
-readme = "README.md"
+version = "0.5"
+description = "Custom provider for Magento 2 - Apache Airflow"
+readme = "README.md"  # Path to the README file
 requires-python = ">=3.8"
-license = { text = "MIT" }
-authors = [
-    { name = "Sivakumar Koduru", email = "sivajik34@gmail.com" }
-]
-urls = {
-    "Homepage" = "https://github.com/sivajik34/magento-airflow",
-}
 
-[project.dependencies]
-apache-airflow = ">=2.8.0"
-requests_oauthlib = "*"
-requests = "*"
+authors = [
+    {name = "Sivakumar Koduru", email = "sivajik34@gmail.com"}
+]
+
+keywords = ["airflow", "magento", "provider"]
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "apache-airflow >= 2.8.0",
+    "requests_oauthlib",
+    "requests",
+]
+
+[project.urls]
+Homepage = "https://github.com/sivajik34/magento-airflow"
+
+[tool.build]
+build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 
