@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from requests_oauthlib import OAuth1
 import requests
 from urllib.parse import urlencode
@@ -16,20 +15,29 @@ class MagentoHook(BaseHook):
     conn_type = "magento"
     hook_name = "Magento"
 
+    # Default endpoints with default version v1
     REST_ENDPOINT = "/rest/{store_view_code}/V1"
-    GRAPHQL_ENDPOINT = "/graphql"  # GraphQL API endpoint
+    GRAPHQL_ENDPOINT = "/graphql"
     ASYNC_ENDPOINT = "/rest/{store_view_code}/async/V1"
     BULK_ENDPOINT = "/rest/{store_view_code}/async/bulk/V1"
 
     SUPPORTED_ASYNC_METHODS = {'POST', 'PUT', 'DELETE', 'PATCH'}
 
-    def __init__(self, magento_conn_id=default_conn_name, store_view_code='default'):
+    def __init__(self, magento_conn_id=default_conn_name, store_view_code='default', api_version='V1'):
         super().__init__()
         self.magento_conn_id = magento_conn_id
         self.store_view_code = store_view_code
+        self.api_version = api_version.upper()  
         self.connection = self.get_connection(self.magento_conn_id)
         self._validate_connection()
         self._configure_oauth()
+        self._update_endpoints()
+
+    def _update_endpoints(self):
+        """Update endpoints with the specified API version."""
+        self.REST_ENDPOINT = f"/rest/{{store_view_code}}/{self.api_version}"
+        self.ASYNC_ENDPOINT = f"/rest/{{store_view_code}}/async/{self.api_version}"
+        self.BULK_ENDPOINT = f"/rest/{{store_view_code}}/async/bulk/{self.api_version}"
 
     def _validate_connection(self):
         """Validate Magento connection configuration."""
@@ -158,7 +166,7 @@ class MagentoHook(BaseHook):
         else:
             response = requests.post(url, json=payload, auth=self.oauth, headers=headers, verify=False)
         return self._handle_response(response)
-
+        
     def async_post_request(self, endpoint, method, data=None, headers=None, bulk=False):
         """Perform an asynchronous POST API request to Magento."""
         if bulk and method == 'GET':
@@ -168,7 +176,7 @@ class MagentoHook(BaseHook):
                                    f"Supported methods are: {', '.join(self.SUPPORTED_ASYNC_METHODS)}.")
         url = self._get_bulk_url(endpoint) if bulk else self._get_async_url(endpoint)
         response = requests.request(method, url, auth=self.oauth, json=data, headers=headers, verify=False)
-        return self._handle_response(response)
+        return self._handle_response(response)    
 
     def get_bulk_status(self, bulk_uuid):
         """Retrieve the status of an asynchronous request using bulk_uuid."""
