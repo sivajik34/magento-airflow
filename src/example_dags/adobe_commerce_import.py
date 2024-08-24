@@ -10,7 +10,7 @@ from apache_airflow_provider_magento.operators.dataimport import MagentoImportOp
 CSV_FILE_PATH = "/home/sivakumar/magento-airflow/src/example_dags/data/sample_skus.csv"
 
 # Define the generate_sample_csv function
-def generate_sample_csv(file_path: str, num_skus: int = 100):
+def generate_sample_csv(file_path: str, num_skus: int = 100000):
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     
     with open(file_path, 'w', newline='') as csvfile:
@@ -20,8 +20,8 @@ def generate_sample_csv(file_path: str, num_skus: int = 100):
         
         for i in range(1, num_skus + 1):
             writer.writerow({
-                'sku': f'SKUDD{i:06d}',
-                'name': f'Productdd {i:06d}',
+                'sku': f'SKU{i:06d}',
+                'name': f'Product {i:06d}',
                 'price': round(10 + i * 0.01, 2),
                 'qty': i % 100 + 1,
                 'product_type': 'simple',  # Assuming 'simple' as a default product type
@@ -65,7 +65,7 @@ def magento_import_dag():
             endpoint='import/csv',
             store_view_code='default',
             csv_file_path=CSV_FILE_PATH,
-            chunk_size=10,  # Define chunk size for better handling
+            chunk_size=10000,  # Define chunk size for better handling
             data_format='csv',
             entity='catalog_product',
             behavior='append',
