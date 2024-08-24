@@ -37,7 +37,7 @@ with DAG(
         method="PUT",  
         data={
             "product": {
-                "price": 58
+                "price": 170
             }
         },        
         magento_conn_id='magento_default',
