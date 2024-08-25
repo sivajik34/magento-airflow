@@ -3,7 +3,6 @@ from __future__ import annotations
 from airflow.models.baseoperator import BaseOperator
 from apache_airflow_provider_magento.hooks.magento import MagentoHook
 from airflow.exceptions import AirflowException
-import logging
 import time
 
 class MagentoRestAsyncOperator(BaseOperator):

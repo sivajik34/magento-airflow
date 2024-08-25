@@ -5,7 +5,6 @@ import requests
 from airflow.exceptions import AirflowException
 from airflow.hooks.base import BaseHook
 import json
-import time
 
 class MagentoHook(BaseHook):
     """Interacts with Magento via REST API and GraphQL API, supporting synchronous and asynchronous operations."""

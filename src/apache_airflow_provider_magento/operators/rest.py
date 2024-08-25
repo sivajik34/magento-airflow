@@ -37,13 +37,10 @@ class MagentoRestOperator(BaseOperator):
         endpoint=f"{self.REST_ENDPOINT_TEMPLATE.format(store_view_code=self.store_view_code, api_version=self.api_version)}/{self.endpoint.lstrip('/')}"        
         if self.search_criteria:
             query_string = urlencode(self.search_criteria, doseq=True)                       
-            endpoint = f"{endpoint}?{query_string}"  
-        result = None
+            endpoint = f"{endpoint}?{query_string}"        
 
-        try:
-            
-            result = magento_hook.send_request(endpoint, self.method, data=self.data,  headers=self.headers)            
-
+        try:            
+            result = magento_hook.send_request(endpoint, self.method, data=self.data,  headers=self.headers)
             self.log.info("Response received from Magento API: %s", result)
             return result
 
