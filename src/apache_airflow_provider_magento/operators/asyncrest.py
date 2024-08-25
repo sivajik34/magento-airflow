@@ -4,9 +4,9 @@ from airflow.models.baseoperator import BaseOperator
 from apache_airflow_provider_magento.hooks.magento import MagentoHook
 from airflow.exceptions import AirflowException
 import logging
+import time
 
 class MagentoRestAsyncOperator(BaseOperator):
-
     SUPPORTED_ASYNC_METHODS = {'POST', 'PUT', 'DELETE', 'PATCH'}
 
     def __init__(self,
@@ -21,6 +21,7 @@ class MagentoRestAsyncOperator(BaseOperator):
                  magento_conn_id: str = "magento_default",
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
+
         self.endpoint = endpoint
         self.method = method.upper()  
         self.data = data or {}
@@ -39,10 +40,6 @@ class MagentoRestAsyncOperator(BaseOperator):
             raise AirflowException(f"Unsupported HTTP method '{self.method}' for asynchronous requests. "
                                    f"Supported methods are: {', '.join(self.SUPPORTED_ASYNC_METHODS)}.")
 
-        # Bulk requests should not use the GET method
-        if self.bulk and self.method == 'GET':
-            raise AirflowException("Bulk GET requests are not supported.")
-
     def execute(self, context):
         magento_hook = MagentoHook(self.magento_conn_id, store_view_code=self.store_view_code)
 
@@ -57,11 +54,56 @@ class MagentoRestAsyncOperator(BaseOperator):
             self.log.info(f"Bulk UUID: {bulk_uuid}")
 
             # Wait for the asynchronous request to complete
-            result = magento_hook.wait_for_bulk_completion(bulk_uuid, timeout=self.timeout, interval=self.interval)
+            result = self.wait_for_bulk_completion(bulk_uuid, timeout=self.timeout, interval=self.interval)
             self.log.info(f"Bulk operation result: {result}")
 
             return result
+
         except Exception as e:
             self.log.error(f"Failed to perform asynchronous operation: {e}")
             raise
+
+    def get_bulk_status(self, bulk_uuid):
+        """Retrieve the status of an asynchronous request using the bulk UUID."""
+        magento_hook = MagentoHook(self.magento_conn_id, store_view_code=self.store_view_code)
+        endpoint = f"/bulk/{bulk_uuid}/status"
+        response = magento_hook.get_request(endpoint)
+        #self.log.info(response)
+        return {
+            "bulk_id": response.get("bulk_id"),
+            "user_type": response.get("user_type"),
+            "description": response.get("description"),
+            "start_time": response.get("start_time"),
+            "user_id": response.get("user_id"),
+            "operation_count": response.get("operation_count"),
+            "operations": [
+                {
+                    "id": operation.get("id"),
+                    "status": operation.get("status"),
+                    "result_message": operation.get("result_message"),
+                    "error_code": operation.get("error_code")
+                }
+                for operation in response.get("operations_list", [])
+            ]
+        }
+
+    def wait_for_bulk_completion(self, bulk_uuid, timeout=300, interval=10):
+        """Wait for the asynchronous bulk operation to complete."""
+        start_time = time.time()
+
+        while True:
+            status_response = self.get_bulk_status(bulk_uuid)
+            operations = status_response["operations"]
+
+            # Check if there are any operations with status 4 (open)
+            open_operations = any(op["status"] == 4 for op in operations)
+
+            if not open_operations:
+                # If no operations are open, return the response
+                return status_response
+
+            if time.time() - start_time > timeout:
+                raise AirflowException(f"Bulk operation with UUID {bulk_uuid} timed out.")
+
+            time.sleep(interval)
 
