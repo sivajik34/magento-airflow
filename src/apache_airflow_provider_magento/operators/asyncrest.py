@@ -7,6 +7,9 @@ import logging
 import time
 
 class MagentoRestAsyncOperator(BaseOperator):
+
+    ASYNC_ENDPOINT_TEMPLATE = "/rest/{store_view_code}/async/{api_version}"
+    BULK_ENDPOINT_TEMPLATE = "/rest/{store_view_code}/async/bulk/{api_version}"
     SUPPORTED_ASYNC_METHODS = {'POST', 'PUT', 'DELETE', 'PATCH'}
 
     def __init__(self,
@@ -19,6 +22,7 @@ class MagentoRestAsyncOperator(BaseOperator):
                  interval: int = 10,
                  store_view_code: str = "default",
                  magento_conn_id: str = "magento_default",
+                 api_version='V1',
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -31,6 +35,7 @@ class MagentoRestAsyncOperator(BaseOperator):
         self.timeout = timeout
         self.interval = interval
         self.store_view_code = store_view_code
+        self.api_version = api_version.upper()
 
         self._validate_parameters()
 
@@ -41,11 +46,13 @@ class MagentoRestAsyncOperator(BaseOperator):
                                    f"Supported methods are: {', '.join(self.SUPPORTED_ASYNC_METHODS)}.")
 
     def execute(self, context):
-        magento_hook = MagentoHook(self.magento_conn_id, store_view_code=self.store_view_code)
+        magento_hook = MagentoHook(self.magento_conn_id)
 
         # Perform the asynchronous request
         try:
-            response = magento_hook.async_post_request(self.endpoint, self.method, data=self.data, headers=self.headers, bulk=self.bulk)
+            url_template = self.BULK_ENDPOINT_TEMPLATE if self.bulk else self.ASYNC_ENDPOINT_TEMPLATE
+            endpoint=f"{url_template.format(store_view_code=self.store_view_code, api_version=self.api_version)}/{self.endpoint.lstrip('/')}"
+            response = magento_hook.send_request(endpoint, self.method, data=self.data, headers=self.headers)
             bulk_uuid = response.get("bulk_uuid")
 
             if not bulk_uuid:
@@ -61,13 +68,13 @@ class MagentoRestAsyncOperator(BaseOperator):
 
         except Exception as e:
             self.log.error(f"Failed to perform asynchronous operation: {e}")
-            raise
+            raise          
 
     def get_bulk_status(self, bulk_uuid):
         """Retrieve the status of an asynchronous request using the bulk UUID."""
-        magento_hook = MagentoHook(self.magento_conn_id, store_view_code=self.store_view_code)
-        endpoint = f"/bulk/{bulk_uuid}/detailed-status"
-        response = magento_hook.get_request(endpoint)
+        magento_hook = MagentoHook(self.magento_conn_id)
+        endpoint = f"/rest/V1/bulk/{bulk_uuid}/detailed-status" #TODO temp fix
+        response = magento_hook.send_request(endpoint,method="GET")
         #self.log.info(response)
         return {
             "bulk_id": response.get("bulk_id"),

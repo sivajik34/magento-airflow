@@ -1,6 +1,6 @@
 [project]
 name = "apache-airflow-provider-magento"
-version = "0.5"
+version = "0.6"
 description = "Custom provider for Magento 2 - Apache Airflow"
 readme = "README.md"  # Path to the README file
 requires-python = ">=3.8"

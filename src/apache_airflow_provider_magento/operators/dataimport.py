@@ -31,7 +31,7 @@ class MagentoImportOperator(BaseOperator):
         **kwargs
     ) -> None:
         super().__init__(*args,**kwargs)
-        self.endpoint = endpoint
+        self.endpoint = f"/rest/default/V1/{endpoint}" #TODO temp fix
         self.store_view_code = store_view_code
         self.csv_file_path = csv_file_path
         self.chunk_size = chunk_size
@@ -69,7 +69,7 @@ class MagentoImportOperator(BaseOperator):
         return base64.b64encode(compressed_data).decode('utf-8')
 
     def execute(self, context):
-        hook = MagentoHook(magento_conn_id=self.magento_conn_id, store_view_code=self.store_view_code)
+        hook = MagentoHook(magento_conn_id=self.magento_conn_id)
 
         if self.data_format == 'csv':
             if not self.csv_file_path:
@@ -97,7 +97,7 @@ class MagentoImportOperator(BaseOperator):
                 }
 
                 headers = {'Content-Type': 'application/json'}
-                response = hook.post_request(endpoint=self.endpoint, data=payload, headers=headers)
+                response = hook.send_request(endpoint=self.endpoint, method="POST", data=payload, headers=headers)
                 self.log.info("Import result for chunk: %s", response)
 
         elif self.data_format == 'json':
@@ -116,7 +116,7 @@ class MagentoImportOperator(BaseOperator):
             }
 
             headers = {'Content-Type': 'application/json'}
-            response = hook.post_request(endpoint=self.endpoint, data=payload, headers=headers)
+            response = hook.send_request(endpoint=self.endpoint,method="POST", data=payload, headers=headers)
             self.log.info("Import result: %s", response)
 
         else:

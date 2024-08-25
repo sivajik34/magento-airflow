@@ -5,19 +5,23 @@ from airflow.exceptions import AirflowException
 
 class MagentoGraphQLOperator(BaseOperator):
     """Operator for executing GraphQL API requests to Magento."""
+    GRAPHQL_ENDPOINT = "/graphql"
 
-    def __init__(self, query: str, variables: dict = None, magento_conn_id: str = "magento_default", headers: dict = None, *args, **kwargs):
+    def __init__(self, query: str, variables: dict = None, magento_conn_id: str = "magento_default", headers: dict = None, store_view_code: str = "default", *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.query = query
         self.variables = variables or {}
         self.magento_conn_id = magento_conn_id
         self.headers = headers or {}
+        self.store_view_code = store_view_code
 
     def execute(self, context):
         magento_hook = MagentoHook(self.magento_conn_id)
 
         try:
-            result = magento_hook.graphql_request(query=self.query, variables=self.variables, headers=self.headers)
+            endpoint = self.GRAPHQL_ENDPOINT
+            payload = {'query': self.query, 'variables': self.variables or {}}
+            result = magento_hook.send_request(endpoint, method="POST", data=payload, headers=self.headers)
             if 'errors' in result:
                 self.log.error("GraphQL errors received: %s", result['errors'])
                 raise AirflowException(f"GraphQL errors: {result['errors']}")
@@ -32,4 +36,4 @@ class MagentoGraphQLOperator(BaseOperator):
         except Exception as e:
             self.log.error("An unexpected error occurred: %s", e, exc_info=True)
             raise
-
+            
