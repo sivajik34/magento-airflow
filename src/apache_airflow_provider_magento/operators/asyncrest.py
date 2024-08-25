@@ -66,7 +66,7 @@ class MagentoRestAsyncOperator(BaseOperator):
     def get_bulk_status(self, bulk_uuid):
         """Retrieve the status of an asynchronous request using the bulk UUID."""
         magento_hook = MagentoHook(self.magento_conn_id, store_view_code=self.store_view_code)
-        endpoint = f"/bulk/{bulk_uuid}/status"
+        endpoint = f"/bulk/{bulk_uuid}/detailed-status"
         response = magento_hook.get_request(endpoint)
         #self.log.info(response)
         return {
@@ -81,6 +81,7 @@ class MagentoRestAsyncOperator(BaseOperator):
                     "id": operation.get("id"),
                     "status": operation.get("status"),
                     "result_message": operation.get("result_message"),
+                    "serialized_data": operation.get("serialized_data"),
                     "error_code": operation.get("error_code")
                 }
                 for operation in response.get("operations_list", [])
