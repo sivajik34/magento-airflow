@@ -56,7 +56,7 @@ def create_customer(email: str, password: str, **kwargs) -> str:
 def choose_path_for_customer(customer_exists: bool):
     if customer_exists:
         return 'generate_customer_token'
-    return 'create_customer'
+    return ['create_customer','check_customer_exists','generate_customer_token']
 
 @task.branch
 def choose_path_for_product(product_exists: bool, sku: str):
@@ -207,12 +207,13 @@ with dag:
     next_task = choose_path_for_customer(customer_exists)
 
     create_customer_task = create_customer(email=customer_email, password=customer_password)
+    customer_exists_task = check_customer_exists(customer_email)
     generate_customer_token_task = generate_customer_token(email=customer_email, password=customer_password)
-    customer_token = generate_customer_token_task
-    next_task >> [create_customer_task, generate_customer_token_task]
-    create_customer_task >> generate_customer_token_task
-    quote_id = create_cart(customer_token)
     
+    next_task >> [create_customer_task,customer_exists_task, generate_customer_token_task]
+    
+    quote_id = create_cart(generate_customer_token_task)
+    generate_customer_token_task >> quote_id
     #product_exists_1 = check_product_exists(sku_1)
     #create_product_product_sku_1 = create_product(sku_1, price_1)
     #next_task_product_1 = choose_path_for_product(product_exists_1, sku_1)        
@@ -222,17 +223,17 @@ with dag:
     #next_task_product_2 = choose_path_for_product(product_exists_2, sku_2)   
     #next_task_product_2 >> create_product_product_sku_2
     
-    add_product_1_to_cart = add_product_to_cart(customer_token, quote_id, 'product_sku_1', qty)
-    add_product_2_to_cart = add_product_to_cart(customer_token, quote_id, 'product_sku_2', qty)
+    add_product_1_to_cart = add_product_to_cart(generate_customer_token_task, quote_id, 'product_sku_1', qty)
+    add_product_2_to_cart = add_product_to_cart(generate_customer_token_task, quote_id, 'product_sku_2', qty)
     
-    #next_task_product_1 >> add_product_to_cart_1
-    #next_task_product_2 >> add_product_to_cart_2
+    #next_task_product_1 >> add_product_1_to_cart
+    #next_task_product_2 >> add_product_2_to_cart
     
     # Task 6: Set billing and shipping address
-    set_billing_shipping_address_task = set_billing_shipping_address(customer_token=customer_token, quote_id=quote_id)
+    set_billing_shipping_address_task = set_billing_shipping_address(customer_token=generate_customer_token_task, quote_id=quote_id)
 
     # Task 7: Set payment method and place order
-    set_payment_method_task = set_payment_method(customer_token=customer_token, quote_id=quote_id)   
+    set_payment_method_task = set_payment_method(customer_token=generate_customer_token_task, quote_id=quote_id)   
 
     # Task 8: Create invoice
     create_invoice_task = create_invoice(order_id=set_payment_method_task)
