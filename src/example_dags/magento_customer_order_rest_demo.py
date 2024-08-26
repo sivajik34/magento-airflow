@@ -210,7 +210,7 @@ with dag:
     generate_customer_token_task = generate_customer_token(email=customer_email, password=customer_password)
     customer_token = generate_customer_token_task
     next_task >> [create_customer_task, generate_customer_token_task]
-    
+    create_customer_task >> generate_customer_token_task
     quote_id = create_cart(customer_token)
     
     #product_exists_1 = check_product_exists(sku_1)
