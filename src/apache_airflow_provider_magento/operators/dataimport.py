@@ -13,7 +13,7 @@ from apache_airflow_provider_magento.hooks.magento import MagentoHook
 class MagentoImportOperator(BaseOperator):
     def __init__(
         self,        
-        endpoint: str,
+        endpoint: str,        
         store_view_code: str,    
         entity: str,
         behavior: str,
@@ -23,6 +23,7 @@ class MagentoImportOperator(BaseOperator):
         import_multiple_value_separator: str,
         import_empty_attribute_value_constant: str,
         import_images_file_dir: str,
+        method: str = "POST",
         csv_file_path: Optional[str] = None,
         chunk_size: int = 10000,
         data_format: str = 'csv',
@@ -31,7 +32,8 @@ class MagentoImportOperator(BaseOperator):
         **kwargs
     ) -> None:
         super().__init__(*args,**kwargs)
-        self.endpoint = f"/rest/default/V1/{endpoint}" #TODO temp fix
+        self.endpoint = f"/rest/default/V1/{endpoint}"
+        self.method = method
         self.store_view_code = store_view_code
         self.csv_file_path = csv_file_path
         self.chunk_size = chunk_size
@@ -69,7 +71,7 @@ class MagentoImportOperator(BaseOperator):
         return base64.b64encode(compressed_data).decode('utf-8')
 
     def execute(self, context):
-        hook = MagentoHook(magento_conn_id=self.magento_conn_id)
+        hook = MagentoHook(magento_conn_id=self.magento_conn_id, method=self.method)
 
         if self.data_format == 'csv':
             if not self.csv_file_path:
@@ -97,7 +99,7 @@ class MagentoImportOperator(BaseOperator):
                 }
 
                 headers = {'Content-Type': 'application/json'}
-                response = hook.send_request(endpoint=self.endpoint, method="POST", data=payload, headers=headers)
+                response = hook.send_request(endpoint=self.endpoint, data=payload, headers=headers)
                 self.log.info("Import result for chunk: %s", response)
 
         elif self.data_format == 'json':
@@ -116,7 +118,7 @@ class MagentoImportOperator(BaseOperator):
             }
 
             headers = {'Content-Type': 'application/json'}
-            response = hook.send_request(endpoint=self.endpoint,method="POST", data=payload, headers=headers)
+            response = hook.send_request(endpoint=self.endpoint, data=payload, headers=headers)
             self.log.info("Import result: %s", response)
 
         else:

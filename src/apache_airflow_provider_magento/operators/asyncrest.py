@@ -4,6 +4,7 @@ from airflow.models.baseoperator import BaseOperator
 from apache_airflow_provider_magento.hooks.magento import MagentoHook
 from airflow.exceptions import AirflowException
 import time
+import json
 
 class MagentoRestAsyncOperator(BaseOperator):
 

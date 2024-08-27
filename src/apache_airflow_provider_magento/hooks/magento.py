@@ -53,15 +53,15 @@ class MagentoHook(HttpHook):
         # Ensure extra_options is initialized properly
         if extra_options is None:
             extra_options = {}
-        # Set the Content-Type to application/json if not already set
+        
         if headers is None:
             headers = {}
-        
+            
+        # Set the Content-Type to application/json if not already set
         headers.setdefault('Content-Type', 'application/json')
 
         # Convert data to JSON if data is provided and method is POST/PUT
-        if data and self.method in ['POST', 'PUT']:
+        if data and self.method in ['POST', 'PUT','DELETE']:
             data = json.dumps(data)
-        response = self.run(endpoint, data=data, headers=headers, extra_options={"verify": False})        
-        return response
+        return self.run(endpoint, data=data, headers=headers, extra_options={"verify": False})       
 
