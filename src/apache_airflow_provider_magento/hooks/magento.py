@@ -1,24 +1,22 @@
-from __future__ import annotations
+from airflow.providers.http.hooks.http import HttpHook
 from requests_oauthlib import OAuth1
-import requests
-
 from airflow.exceptions import AirflowException
-from airflow.hooks.base import BaseHook
 import json
 
-class MagentoHook(BaseHook):
+class MagentoHook(HttpHook):
     """Interacts with Magento via REST API and GraphQL API, supporting synchronous and asynchronous operations."""
 
     conn_name_attr = "magento_conn_id"
     default_conn_name = "magento_default"
     conn_type = "magento"
-    hook_name = "Magento" 
- 
-    def __init__(self, magento_conn_id=default_conn_name):
-        super().__init__()
+    hook_name = "Magento"
+
+    def __init__(self, magento_conn_id=default_conn_name, method="GET"):
+        super().__init__(http_conn_id=magento_conn_id, method=method)
         self.magento_conn_id = magento_conn_id        
         self.connection = self.get_connection(self.magento_conn_id)
-        
+        self.method = method
+        self.base_url = self.connection.host        
         self._validate_connection()
         self._configure_oauth()
 
@@ -40,52 +38,30 @@ class MagentoHook(BaseHook):
             self.connection.extra_dejson["access_token_secret"],
             signature_method='HMAC-SHA256'
         )
-
-    def _build_url(self, endpoint):
-        """Construct the full URL for Magento API endpoints."""
-        base_url = self.connection.host if self.connection.host.startswith('http') else f"https://{self.connection.host}"
-        base_url = base_url.rstrip('/')
-        return f"{base_url}/{endpoint.lstrip('/')}"
-
-    def _handle_response(self, response):
-        """Handle and log HTTP responses from the Magento API."""
-        try:
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.HTTPError as http_err:
-            self._log_error_response(response)
-            raise AirflowException(f"HTTP error occurred: {http_err}")
-        except requests.exceptions.Timeout as timeout_err:
-            self.log.error("Request timed out: %s", timeout_err)
-            raise AirflowException(f"Request timed out: {timeout_err}")
-        except requests.exceptions.RequestException as req_err:
-            self._log_error_response(response)
-            raise AirflowException(f"Request failed: {req_err}")
-        except json.JSONDecodeError as json_err:
-            self.log.error("Failed to decode JSON response: %s", json_err)
-            raise AirflowException(f"Failed to decode JSON response: {json_err}")
-        except Exception as e:
-            self.log.error("An unexpected error occurred: %s", e, exc_info=True)
-            raise AirflowException(f"An unexpected error occurred: {e}")
-
-    def _log_error_response(self, response):
-        """Log error details from the HTTP response."""
-        try:
-            error_details = response.json()
-        except json.JSONDecodeError:
-            error_details = {"error": "Failed to decode error details"}
-        self.log.error("Response status code: %d", response.status_code)
-        self.log.error("Response headers: %s", response.headers)
-        self.log.error("Response body: %s", response.text)
-        self.log.error("Error details: %s", error_details)
-
-    def send_request(self, endpoint, method="GET", data=None, headers=None):
-        """Send an HTTP request to the Magento API."""       
-        url = self._build_url(endpoint)
-        
-        if headers and 'Authorization' in headers:
-           response = requests.request(method, url, json=data, headers=headers, verify=False)
-        else:
-           response = requests.request(method, url, json=data, auth=self.oauth, headers=headers, verify=False)
-        return self._handle_response(response)       
     
+    def get_conn(self, headers=None):
+        if headers and 'Authorization' in headers:
+            return super().get_conn(headers)
+        else:    
+            session = super().get_conn(headers)        
+            session.auth = self.oauth
+            return session    
+   
+    def send_request(self, endpoint, data=None, headers=None, extra_options=None):
+        """Send an HTTP request to the Magento API."""
+        
+        # Ensure extra_options is initialized properly
+        if extra_options is None:
+            extra_options = {}
+        # Set the Content-Type to application/json if not already set
+        if headers is None:
+            headers = {}
+        
+        headers.setdefault('Content-Type', 'application/json')
+
+        # Convert data to JSON if data is provided and method is POST/PUT
+        if data and self.method in ['POST', 'PUT']:
+            data = json.dumps(data)
+        response = self.run(endpoint, data=data, headers=headers, extra_options={"verify": False})        
+        return response
+

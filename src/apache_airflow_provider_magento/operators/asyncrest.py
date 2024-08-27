@@ -45,14 +45,14 @@ class MagentoRestAsyncOperator(BaseOperator):
                                    f"Supported methods are: {', '.join(self.SUPPORTED_ASYNC_METHODS)}.")
 
     def execute(self, context):
-        magento_hook = MagentoHook(self.magento_conn_id)
+        magento_hook = MagentoHook(self.magento_conn_id, self.method)
 
         # Perform the asynchronous request
         try:
             url_template = self.BULK_ENDPOINT_TEMPLATE if self.bulk else self.ASYNC_ENDPOINT_TEMPLATE
             endpoint=f"{url_template.format(store_view_code=self.store_view_code, api_version=self.api_version)}/{self.endpoint.lstrip('/')}"
-            response = magento_hook.send_request(endpoint, self.method, data=self.data, headers=self.headers)
-            bulk_uuid = response.get("bulk_uuid")
+            response = magento_hook.send_request(endpoint, data=self.data, headers=self.headers)
+            bulk_uuid = response.json().get("bulk_uuid")
 
             if not bulk_uuid:
                 raise AirflowException("No bulk_uuid found in the response.")
@@ -71,9 +71,9 @@ class MagentoRestAsyncOperator(BaseOperator):
 
     def get_bulk_status(self, bulk_uuid):
         """Retrieve the status of an asynchronous request using the bulk UUID."""
-        magento_hook = MagentoHook(self.magento_conn_id)
+        magento_hook = MagentoHook(self.magento_conn_id,"GET")
         endpoint = f"/rest/V1/bulk/{bulk_uuid}/detailed-status" #TODO temp fix
-        response = magento_hook.send_request(endpoint,method="GET")
+        response = magento_hook.send_request(endpoint).json()
         #self.log.info(response)
         return {
             "bulk_id": response.get("bulk_id"),

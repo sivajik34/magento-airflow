@@ -16,12 +16,13 @@ class MagentoGraphQLOperator(BaseOperator):
         self.store_view_code = store_view_code
 
     def execute(self, context):
-        magento_hook = MagentoHook(self.magento_conn_id)
+        magento_hook = MagentoHook(self.magento_conn_id,"POST")
 
         try:
             endpoint = self.GRAPHQL_ENDPOINT
             payload = {'query': self.query, 'variables': self.variables or {}}
-            result = magento_hook.send_request(endpoint, method="POST", data=payload, headers=self.headers)
+            response = magento_hook.send_request(endpoint, data=payload, headers=self.headers)
+            result=response.json()
             if 'errors' in result:
                 self.log.error("GraphQL errors received: %s", result['errors'])
                 raise AirflowException(f"GraphQL errors: {result['errors']}")
