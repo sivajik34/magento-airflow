@@ -77,7 +77,7 @@ class MagentoHook(HttpHook):
 
             try:
                 result = response.json()
-                self.log.info("Parsed JSON Response: %s", result)
+                #self.log.info("Parsed JSON Response: %s", result)
                 return result
             except json.JSONDecodeError:
                 self.log.warning("Response is not in JSON format. Returning raw text.")

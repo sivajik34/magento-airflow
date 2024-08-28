@@ -2,6 +2,7 @@ from airflow.providers.http.operators.http import HttpOperator
 from apache_airflow_provider_magento.hooks.magento import MagentoHook
 from typing import Any, Dict, Optional, Callable
 from urllib.parse import urlencode
+import json
 
 class MagentoRestOperator(HttpOperator):
     """
@@ -53,7 +54,8 @@ class MagentoRestOperator(HttpOperator):
             data=data,  # Data is used for POST, PUT, DELETE requests
             headers=headers,
             response_check=response_check,
-            extra_options=extra_options or {"verify": False},            
+            extra_options=extra_options or {"verify": False},
+            log_response = log_response,            
             **kwargs,
         )
         self.pagination_function = pagination_function
@@ -84,12 +86,8 @@ class MagentoRestOperator(HttpOperator):
         Executes the HTTP request using MagentoHook and processes the response.
         """
         try:
-            hook = self.get_hook()
-            # Debug log to check the values
-            self.log.info("Method: %s", self.method)
-            self.log.info("Pagination Function: %s", self.pagination_function)
-            if self.pagination_function and self.method == 'GET':
-                self.log.info("calling pagination")
+            hook = self.get_hook()            
+            if self.pagination_function and self.method == 'GET':                
                 all_results = self.pagination_function(
                     hook=hook,
                     endpoint=self.endpoint,                    
@@ -100,7 +98,7 @@ class MagentoRestOperator(HttpOperator):
                 if self.log_response:
                     self.log.info("Aggregated Response Body: %s", json.dumps(all_results, indent=2))
                 return all_results
-            self.log.info("not calling pagination")
+            
             response = hook.send_request(
                 endpoint=self.endpoint,
                 data=self.data,
