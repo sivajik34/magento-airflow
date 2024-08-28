@@ -2,6 +2,7 @@ from airflow.providers.http.hooks.http import HttpHook
 from requests_oauthlib import OAuth1
 from airflow.exceptions import AirflowException
 import json
+import requests
 
 class MagentoHook(HttpHook):
     """Interacts with Magento via REST API and GraphQL API, supporting synchronous and asynchronous operations."""
@@ -31,13 +32,18 @@ class MagentoHook(HttpHook):
 
     def _configure_oauth(self):
         """Configure OAuth authentication for Magento API requests."""
-        self.oauth = OAuth1(
-            self.connection.extra_dejson["consumer_key"],
-            self.connection.extra_dejson["consumer_secret"],
-            self.connection.extra_dejson["access_token"],
-            self.connection.extra_dejson["access_token_secret"],
-            signature_method='HMAC-SHA256'
-        )
+        try:
+            self.oauth = OAuth1(
+                self.connection.extra_dejson["consumer_key"],
+                self.connection.extra_dejson["consumer_secret"],
+                self.connection.extra_dejson["access_token"],
+                self.connection.extra_dejson["access_token_secret"],
+                signature_method='HMAC-SHA256'
+            )
+        except KeyError as e:
+            raise AirflowException(f"Missing OAuth credential: {str(e)}")
+        except Exception as e:
+            raise AirflowException(f"Failed to configure OAuth: {str(e)}")
     
     def get_conn(self, headers=None):
         if headers and 'Authorization' in headers:
@@ -46,29 +52,39 @@ class MagentoHook(HttpHook):
             session = super().get_conn(headers)        
             session.auth = self.oauth
             return session    
-   
+
     def send_request(self, endpoint, data=None, headers=None, extra_options=None):
         """Send an HTTP request to the Magento API."""
-        
         # Ensure extra_options is initialized properly
         if extra_options is None:
             extra_options = {}
-        
+
         if headers is None:
             headers = {}
-            
+
         # Set the Content-Type to application/json if not already set
         headers.setdefault('Content-Type', 'application/json')
 
-        # Convert data to JSON if data is provided and method is POST/PUT
-        if data and self.method in ['POST', 'PUT','DELETE']:
-            data = json.dumps(data)
-        response= self.run(endpoint, data=data, headers=headers, extra_options={"verify": False})
+        # Convert data to JSON if data is provided and method is POST/PUT/DELETE
+        if data and self.method in ['POST', 'PUT', 'DELETE']:
+            try:
+                data = json.dumps(data)
+            except (TypeError, ValueError) as e:
+                raise AirflowException(f"Failed to serialize data to JSON: {str(e)}")
+
         try:
-            result = response.json()
-            self.log.info("Parsed JSON Response: %s", result)
-            return result
-        except json.JSONDecodeError:
-            self.log.warning("Response is not in JSON format. Returning raw text.")
-            return response.text       
+            response = self.run(endpoint, data=data, headers=headers, extra_options={"verify": False})
+
+            try:
+                result = response.json()
+                self.log.info("Parsed JSON Response: %s", result)
+                return result
+            except json.JSONDecodeError:
+                self.log.warning("Response is not in JSON format. Returning raw text.")
+                return response.text
+
+        except requests.exceptions.RequestException as e:
+            raise AirflowException(f"Request failed: {str(e)}")
+        except Exception as e:
+            raise AirflowException(f"Failed to send request: {str(e)}")
 
