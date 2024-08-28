@@ -21,8 +21,7 @@ class MagentoGraphQLOperator(BaseOperator):
         try:
             endpoint = self.GRAPHQL_ENDPOINT
             payload = {'query': self.query, 'variables': self.variables or {}}
-            response = magento_hook.send_request(endpoint, data=payload, headers=self.headers)
-            result=response.json()
+            result = magento_hook.send_request(endpoint, data=payload, headers=self.headers)            
             if 'errors' in result:
                 self.log.error("GraphQL errors received: %s", result['errors'])
                 raise AirflowException(f"GraphQL errors: {result['errors']}")

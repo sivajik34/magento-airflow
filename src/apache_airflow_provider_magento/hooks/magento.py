@@ -63,5 +63,12 @@ class MagentoHook(HttpHook):
         # Convert data to JSON if data is provided and method is POST/PUT
         if data and self.method in ['POST', 'PUT','DELETE']:
             data = json.dumps(data)
-        return self.run(endpoint, data=data, headers=headers, extra_options={"verify": False})       
+        response= self.run(endpoint, data=data, headers=headers, extra_options={"verify": False})
+        try:
+            result = response.json()
+            self.log.info("Parsed JSON Response: %s", result)
+            return result
+        except json.JSONDecodeError:
+            self.log.warning("Response is not in JSON format. Returning raw text.")
+            return response.text       
 

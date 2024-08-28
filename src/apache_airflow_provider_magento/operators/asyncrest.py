@@ -4,7 +4,6 @@ from airflow.models.baseoperator import BaseOperator
 from apache_airflow_provider_magento.hooks.magento import MagentoHook
 from airflow.exceptions import AirflowException
 import time
-import json
 
 class MagentoRestAsyncOperator(BaseOperator):
 
@@ -53,7 +52,7 @@ class MagentoRestAsyncOperator(BaseOperator):
             url_template = self.BULK_ENDPOINT_TEMPLATE if self.bulk else self.ASYNC_ENDPOINT_TEMPLATE
             endpoint=f"{url_template.format(store_view_code=self.store_view_code, api_version=self.api_version)}/{self.endpoint.lstrip('/')}"
             response = magento_hook.send_request(endpoint, data=self.data, headers=self.headers)
-            bulk_uuid = response.json().get("bulk_uuid")
+            bulk_uuid = response.get("bulk_uuid")
 
             if not bulk_uuid:
                 raise AirflowException("No bulk_uuid found in the response.")
@@ -74,7 +73,7 @@ class MagentoRestAsyncOperator(BaseOperator):
         """Retrieve the status of an asynchronous request using the bulk UUID."""
         magento_hook = MagentoHook(self.magento_conn_id,"GET")
         endpoint = f"/rest/V1/bulk/{bulk_uuid}/detailed-status" #TODO temp fix
-        response = magento_hook.send_request(endpoint).json()
+        response = magento_hook.send_request(endpoint)
         #self.log.info(response)
         return {
             "bulk_id": response.get("bulk_id"),

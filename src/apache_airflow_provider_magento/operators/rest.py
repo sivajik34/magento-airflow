@@ -109,15 +109,7 @@ class MagentoRestOperator(HttpOperator):
     )
 
             if self.log_response:
-                self.log.info("Response Body: %s", response.text)
-
-            try:
-                result = response.json()
-                self.log.info("Parsed JSON Response: %s", result)
-                return result
-            except json.JSONDecodeError:
-                self.log.warning("Response is not in JSON format. Returning raw text.")
-                return response.text
+                self.log.info("Response Body: %s", response.text) #TODO need to check         
 
         except AirflowException as ae:
             self.log.error("AirflowException occurred: %s", ae)

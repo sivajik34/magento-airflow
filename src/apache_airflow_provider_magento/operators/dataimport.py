@@ -1,7 +1,6 @@
 from __future__ import annotations
 import os
 import csv
-import json
 import base64
 import gzip
 from typing import List, Optional
